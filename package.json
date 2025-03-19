@@ -2,7 +2,6 @@
   "scripts": {
     "build": "tsc",
     "start": "yarn build && node dist/**/index.js",
-    "prepare": "husky"
   },
   "dependencies": {
     "fastify": "^5.2.1",

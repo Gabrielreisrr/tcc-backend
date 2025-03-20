@@ -8,13 +8,19 @@ class App {
     this.app = Fastify();
     this.middlewares();
     this.routes();
-    this.serverLog()
+    this.serverLog();
   }
 
-  private serverLog(): void {
-    this.app.listen({ port: 300 }, () => {
-      console.log("Listening port at 300");
-    });
+  private async serverLog(): Promise<void> {
+    const port = Number(process.env.PORT) || 3000;
+    try {
+      await this.app.listen({ port });
+      console.log(`Listening on port ${port}`);
+      console.log("Server started at http://localhost:3000");
+    } catch (error) {
+      console.error("Error starting server:", error);
+      process.exit(1);
+    }
   }
 
   private middlewares(): void {

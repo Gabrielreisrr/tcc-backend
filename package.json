@@ -1,11 +1,13 @@
 {
   "scripts": {
     "build": "tsc",
-    "start": "yarn build && node dist/app.js"
+    "start": "yarn build && node dist/server.js",
+    "dev": "node --env-file=.env --loader ts-node/esm src/server.ts"
   },
   "dependencies": {
     "fastify": "^5.2.1",
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "mongoose": "^8.12.1"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
   "devDependencies": {

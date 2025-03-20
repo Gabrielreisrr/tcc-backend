@@ -1,22 +1,45 @@
 import globals from "globals";
+import pluginJs from "@eslint/js";
 import tseslint from "typescript-eslint";
 
+/** @type {import('eslint').Linter.Config[]} */
 export default [
-  tseslint.configs.recommended,
   {
     files: ["**/*.{js,mjs,cjs,ts}"],
     languageOptions: {
-      globals: globals.browser
+      globals: globals.browser,
+      parser: "@typescript-eslint/parser",
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        ecmaFeatures: {
+          jsx: true
+        }
+      }
     },
     plugins: {
-      "@typescript-eslint": tseslint.plugin
+      "@typescript-eslint": tseslint.plugin,
+      "prettier": "eslint-plugin-prettier"
     },
+    extends: [
+      pluginJs.configs.recommended,
+      ...tseslint.configs.recommended,
+      "plugin:prettier/recommended"
+    ],
     rules: {
-      ...tseslint.configs.recommended.rules,
-      "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }], // Variáveis não utilizadas geram aviso
-      "semi": ["error", "always"], // Exige ponto e vírgula
-      "@typescript-eslint/no-explicit-any": "error", // Proíbe uso de `any`
-      "prefer-const": "warn" // Sugere `const` quando possível
+      "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+      "semi": ["error", "always"],
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/explicit-module-boundary-types": "warn",
+      "prefer-const": "warn",
+      "no-console": "warn",
+      "prettier/prettier": "error",
+      "no-debugger": "error",
+      "eqeqeq": "error",
+      "no-trailing-spaces": "warn",
+      "curly": ["error", "all"],
+      "indent": ["error", 2],
+      "quotes": ["error", "double"]
     }
   }
 ];

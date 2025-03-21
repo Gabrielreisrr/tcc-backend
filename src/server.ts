@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance } from "fastify";
 import homeRoutes from "./routes/homeRouter";
+import initDB from "./config/database";
 
 class App {
   public app: FastifyInstance;
@@ -8,6 +9,7 @@ class App {
     this.app = Fastify();
     this.middlewares();
     this.routes();
+    this.database();
     this.serverLog();
   }
 
@@ -21,6 +23,10 @@ class App {
       console.error("Error starting server:", error);
       process.exit(1);
     }
+  }
+
+  private async database(): Promise<void> {
+    await initDB();
   }
 
   private middlewares(): void {

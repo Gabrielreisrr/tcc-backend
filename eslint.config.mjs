@@ -33,7 +33,7 @@ export default [
       "@typescript-eslint/explicit-module-boundary-types": "warn",
       "prefer-const": "warn",
       "no-console": "warn",
-      "prettier/prettier": "error",
+      "prettier/prettier": "error", 
       "no-debugger": "error",
       "eqeqeq": "error",
       "no-trailing-spaces": "warn",

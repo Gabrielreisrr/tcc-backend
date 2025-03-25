@@ -1,6 +1,6 @@
 import Fastify, { FastifyInstance } from "fastify";
 import homeRoutes from "./routes/homeRouter";
-import initDB from "./config/database";
+import { mongoCLient } from "./config/database";
 
 class App {
   public app: FastifyInstance;
@@ -26,7 +26,7 @@ class App {
   }
 
   private async database(): Promise<void> {
-    await initDB();
+    await mongoCLient();
   }
 
   private middlewares(): void {

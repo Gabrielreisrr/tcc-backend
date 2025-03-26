@@ -13,7 +13,8 @@ export const mongoCLient = async () => {
     .then(() => {
       console.log("Database connected");
     })
-    .catch(() => {
+    .catch((e) => {
+      console.error("Mongo error:", e);
       console.log("Error while connecting in database!");
     });
 };

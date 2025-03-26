@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import User from "../models/userModel";
+import { User } from "../models/userModel";
 
 class UserController {
   public async create(

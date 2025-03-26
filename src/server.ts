@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance } from "fastify";
 import homeRoutes from "./routes/homeRouter";
+import userRoutes from "./routes/userRouter";
 import { mongoCLient } from "./config/database";
 
 class App {
@@ -36,6 +37,7 @@ class App {
 
   private routes(): void {
     this.app.register(homeRoutes, { prefix: "/" });
+    this.app.register(userRoutes, { prefix: "/users" });
   }
 }
 

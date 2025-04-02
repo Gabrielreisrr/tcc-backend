@@ -1,7 +1,9 @@
 import Fastify, { FastifyInstance } from "fastify";
+import multipart from "@fastify/multipart";
 import homeRoutes from "./routes/homeRouter";
 import userRoutes from "./routes/userRouter";
 import { mongoCLient } from "./config/database";
+import transkriptorRoutes from "./routes/transcriptionRoutes";
 
 class App {
   public app: FastifyInstance;
@@ -20,6 +22,12 @@ class App {
       await this.app.listen({ port });
       console.log(`Listening on port ${port}`);
       console.log("Server started at http://localhost:3000");
+      console.log(
+        "OPENAI_API_KEY:",
+        process.env.OPENAI_API_KEY
+          ? "Chave carregada!"
+          : "Chave NÃO encontrada!"
+      );
     } catch (error) {
       console.error("Error starting server:", error);
       process.exit(1);
@@ -31,13 +39,13 @@ class App {
   }
 
   private middlewares(): void {
-    // this.app.register(require("@fastify/formbody"));
-    // this.app.register(require("@fastify/json-schema"));
+    this.app.register(multipart);
   }
 
   private routes(): void {
     this.app.register(homeRoutes, { prefix: "/" });
     this.app.register(userRoutes, { prefix: "/users" });
+    this.app.register(transkriptorRoutes, { prefix: "/api" });
   }
 }
 

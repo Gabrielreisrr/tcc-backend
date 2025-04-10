@@ -22,12 +22,12 @@ class App {
       await this.app.listen({ port });
       console.log(`Listening on port ${port}`);
       console.log("Server started at http://localhost:3000");
-      console.log(
-        "OPENAI_API_KEY:",
-        process.env.OPENAI_API_KEY
-          ? "Chave carregada!"
-          : "Chave NÃO encontrada!"
-      );
+      // console.log(
+      //   "OPENAI_API_KEY:",
+      //   process.env.OPENAI_API_KEY
+      //     ? "Chave carregada!"
+      //     : "Chave NÃO encontrada!"
+      // );
     } catch (error) {
       console.error("Error starting server:", error);
       process.exit(1);

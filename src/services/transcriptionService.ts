@@ -3,10 +3,15 @@ import fs from "fs";
 import path from "path";
 import { pipeline } from "stream";
 import util from "util";
-import { OpenAI } from "openai";
+import FormData from "form-data";
+import axios from "axios";
 
 const pump = util.promisify(pipeline);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const uploadDir = path.join(__dirname, "../../uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 export const transcribeAudio = async (request: FastifyRequest) => {
   const data = await request.file();
@@ -15,20 +20,26 @@ export const transcribeAudio = async (request: FastifyRequest) => {
     throw new Error("Nenhum arquivo de áudio foi enviado");
   }
 
-  const uploadPath = path.join(__dirname, "../../uploads", data.filename);
+  const uploadPath = path.join(uploadDir, data.filename);
 
   try {
     await pump(data.file, fs.createWriteStream(uploadPath));
 
-    const response = await openai.audio.transcriptions.create({
-      file: fs.createReadStream(uploadPath),
-      model: "whisper-1",
-      language: "pt",
-    });
+    const formData = new FormData();
+    formData.append("file", fs.createReadStream(uploadPath));
+
+    const response = await axios.post(
+      "http://localhost:8001/transcribe",
+      formData,
+      {
+        headers: formData.getHeaders(),
+        timeout: 5 * 60 * 1000,
+      }
+    );
 
     fs.unlinkSync(uploadPath);
 
-    return response.text;
+    return response.data.transcription;
   } catch (error) {
     console.error("Erro ao transcrever áudio:", error);
     throw new Error("Falha ao processar a transcrição");

@@ -7,8 +7,7 @@ class TranscriptionController {
     res: FastifyReply
   ): Promise<void> {
     try {
-      const transcription = await transcribeAudio(req);
-      res.status(200).send({ transcription });
+      await transcribeAudio(req, res);
     } catch (error) {
       console.error(
         "Erro ao processar transcrição:",

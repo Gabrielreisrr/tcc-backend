@@ -1,4 +1,4 @@
-import { FastifyRequest } from "fastify";
+import { FastifyReply, FastifyRequest } from "fastify";
 import fs from "fs";
 import path from "path";
 import { pipeline } from "stream";
@@ -13,7 +13,10 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-export const transcribeAudio = async (request: FastifyRequest) => {
+export const transcribeAudio = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
   const data = await request.file();
 
   if (!data) {
@@ -38,14 +41,15 @@ export const transcribeAudio = async (request: FastifyRequest) => {
       }
     );
 
-    let transcription = "";
-    for await (const chunk of response.data) {
-      transcription += chunk.toString();
-    }
-
     fs.unlinkSync(uploadPath);
 
-    return transcription;
+    reply.headers({
+      "Content-Type": "text/plain",
+      "Transfer-Encoding": "chunked",
+    });
+
+    response.data.pipe(reply.raw);
+    console.log("Transcrição enviada com sucesso!");
   } catch (error) {
     console.error("Erro ao transcrever áudio:", error);
     throw new Error("Falha ao processar a transcrição");

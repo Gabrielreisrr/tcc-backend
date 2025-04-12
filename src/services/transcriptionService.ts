@@ -33,13 +33,19 @@ export const transcribeAudio = async (request: FastifyRequest) => {
       formData,
       {
         headers: formData.getHeaders(),
+        responseType: "stream",
         timeout: 5 * 60 * 1000,
       }
     );
 
+    let transcription = "";
+    for await (const chunk of response.data) {
+      transcription += chunk.toString();
+    }
+
     fs.unlinkSync(uploadPath);
 
-    return response.data.transcription;
+    return transcription;
   } catch (error) {
     console.error("Erro ao transcrever áudio:", error);
     throw new Error("Falha ao processar a transcrição");

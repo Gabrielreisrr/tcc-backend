@@ -1,19 +1,11 @@
-import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
-class HashService {
-  private saltRounds: number;
+const JWT_SECRET = process.env.JWT_SECRET || "segredo_teste";
 
-  constructor(saltRounds: number = 10) {
-    this.saltRounds = saltRounds;
-  }
-
-  async makeHash(password: string): Promise<string> {
-    return await bcrypt.hash(password, this.saltRounds);
-  }
-
-  async validateHash(password: string, hash: string): Promise<boolean> {
-    return await bcrypt.compare(password, hash);
-  }
+export function generateToken(payload: object) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" });
 }
 
-export default new HashService();
+export function verifyToken(token: string) {
+  return jwt.verify(token, JWT_SECRET);
+}

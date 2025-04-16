@@ -13,33 +13,33 @@ export default [
         ecmaVersion: "latest",
         sourceType: "module",
         ecmaFeatures: {
-          jsx: true
-        }
-      }
+          jsx: true,
+        },
+      },
     },
     plugins: {
       "@typescript-eslint": tseslint.plugin,
-      "prettier": "eslint-plugin-prettier"
+      prettier: "eslint-plugin-prettier",
     },
     extends: [
       pluginJs.configs.recommended,
       ...tseslint.configs.recommended,
-      "plugin:prettier/recommended"
+      "plugin:prettier/recommended",
     ],
     rules: {
-      "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-      "semi": ["error", "always"],
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      semi: ["error", "always"],
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/explicit-module-boundary-types": "warn",
       "prefer-const": "warn",
       "no-console": "warn",
-      "prettier/prettier": "error", 
+      "prettier/prettier": "error",
       "no-debugger": "error",
-      "eqeqeq": "error",
+      eqeqeq: "error",
       "no-trailing-spaces": "warn",
-      "curly": ["error", "all"],
-      "indent": ["error", 2],
-      "quotes": ["error", "double"]
-    }
-  }
+      curly: ["error", "all"],
+      indent: ["error", 2],
+      quotes: ["error", "double"],
+    },
+  },
 ];

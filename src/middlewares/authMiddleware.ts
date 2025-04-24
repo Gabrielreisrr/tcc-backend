@@ -12,7 +12,6 @@ export async function authMiddleware(req: FastifyRequest, res: FastifyReply) {
     const token = authHeader.split(" ")[1];
     const decoded = verifyToken(token);
 
-    // opcional: salvar user no request
     (req as any).user = decoded;
   } catch (error) {
     return res.status(401).send({ error: "Token inválido" });

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { User } from "../models/userModel";
 import bcrypt from "bcrypt";
 import { generateToken } from "../services/hashService";
+import History from "../models/History";
 
 const userSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres"),
@@ -14,6 +15,21 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 });
+
+const segmentSchema = z.object({
+  time: z.string(),
+  text: z.string(),
+});
+
+declare module "fastify" {
+  interface FastifyRequest {
+    user?: {
+      id: string;
+    };
+  }
+}
+
+const segmentsSchema = z.array(segmentSchema);
 
 class UserController {
   public async create(req: FastifyRequest, res: FastifyReply) {
@@ -80,6 +96,49 @@ class UserController {
     } catch (error) {
       console.error("Erro no login:", error);
       return res.status(500).send({ error: "Erro interno" });
+    }
+  }
+
+  public async saveHistory(
+    req: FastifyRequest<{ Body: { segments: any[] } }>,
+    res: FastifyReply
+  ) {
+    try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).send({ error: "Não autorizado" });
+      }
+
+      const validation = segmentsSchema.safeParse(req.body.segments);
+      if (!validation.success) {
+        return res.status(400).send({ error: "Segmentos inválidos" });
+      }
+
+      const userId = req.user.id;
+      const { segments } = req.body;
+
+      await History.create({ userId, segments });
+      res.send({ ok: true });
+    } catch (error) {
+      console.error("Erro ao salvar histórico:", error);
+      res.status(500).send({ error: "Erro ao salvar histórico" });
+    }
+  }
+
+  public async getHistory(req: FastifyRequest, res: FastifyReply) {
+    try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).send({ error: "Não autorizado" });
+      }
+
+      const userId = req.user.id;
+      const recent = await History.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(10);
+
+      res.send(recent);
+    } catch (error) {
+      console.error("Erro ao buscar histórico:", error);
+      res.status(500).send({ error: "Erro ao buscar histórico" });
     }
   }
 }

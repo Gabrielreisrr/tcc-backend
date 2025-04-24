@@ -49,6 +49,12 @@ export const transcribeAudio = async (
     });
 
     response.data.pipe(reply.raw);
+    const segments: { time: string; text: string }[] = [];
+    await axios.post(
+      "http://localhost:3000/users/history",
+      { segments },
+      { headers: { Authorization: request.headers.authorization! } }
+    );
     console.log("Transcrição enviada com sucesso!");
   } catch (error) {
     console.error("Erro ao transcrever áudio:", error);

@@ -8,12 +8,7 @@ async function userRoutes(app: FastifyInstance) {
   app.get("/", userController.getAll);
   app.post("/login", userController.login);
 
-  app.get("/me", { preHandler: authMiddleware }, async (req, res) => {
-    return res.send({
-      message: "Você está autenticado!",
-      user: req.user,
-    });
-  });
+  app.get("/me", userController.me);
 
   app.register(async (protectedRoutes) => {
     protectedRoutes.addHook("preHandler", authMiddleware);

@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance } from "fastify";
 import multipart from "@fastify/multipart";
+import cors from "@fastify/cors"; // Adicione esta importação
 import homeRoutes from "./routes/homeRouter";
 import userRoutes from "./routes/userRouter";
 import { mongoCLient } from "./config/database";
@@ -19,15 +20,9 @@ class App {
   private async serverLog(): Promise<void> {
     const port = Number(process.env.PORT) || 3000;
     try {
-      await this.app.listen({ port });
+      await this.app.listen({ port, host: "0.0.0.0" });
       console.log(`Listening on port ${port}`);
       console.log("Server started at http://localhost:3000");
-      // console.log(
-      //   "OPENAI_API_KEY:",
-      //   process.env.OPENAI_API_KEY
-      //     ? "Chave carregada!"
-      //     : "Chave NÃO encontrada!"
-      // );
     } catch (error) {
       console.error("Error starting server:", error);
       process.exit(1);
@@ -39,6 +34,12 @@ class App {
   }
 
   private middlewares(): void {
+    this.app.register(cors, {
+      origin: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      credentials: true,
+    });
+
     this.app.register(multipart);
   }
 

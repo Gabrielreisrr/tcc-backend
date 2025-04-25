@@ -141,6 +141,24 @@ class UserController {
       res.status(500).send({ error: "Erro ao buscar histórico" });
     }
   }
+
+  public async me(req: FastifyRequest, res: FastifyReply) {
+    try {
+      if (!req.user || !req.user.id) {
+        return res.status(401).send({ error: "Não autorizado" });
+      }
+
+      const user = await User.findById(req.user.id).select("name email");
+      if (!user) {
+        return res.status(404).send({ error: "Usuário não encontrado" });
+      }
+
+      return res.send({ user });
+    } catch (error) {
+      console.error("Erro ao buscar informações do usuário:", error);
+      return res.status(500).send({ error: "Erro interno do servidor" });
+    }
+  }
 }
 
 export default new UserController();

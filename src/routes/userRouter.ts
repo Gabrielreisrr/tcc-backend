@@ -8,10 +8,9 @@ async function userRoutes(app: FastifyInstance) {
   app.get("/", userController.getAll);
   app.post("/login", userController.login);
 
-  app.get("/me", userController.me);
-
   app.register(async (protectedRoutes) => {
     protectedRoutes.addHook("preHandler", authMiddleware);
+    protectedRoutes.get("/me", userController.me);
     protectedRoutes.post("/history", userController.saveHistory);
     protectedRoutes.get("/history", userController.getHistory);
   });

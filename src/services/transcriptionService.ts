@@ -5,6 +5,7 @@ import { pipeline } from "stream";
 import util from "util";
 import FormData from "form-data";
 import axios from "axios";
+import History from "../models/History";
 
 const pump = util.promisify(pipeline);
 
@@ -36,28 +37,56 @@ export const transcribeAudio = async (
       formData,
       {
         headers: formData.getHeaders(),
-        responseType: "stream",
+        responseType: "json",
         timeout: 5 * 60 * 1000,
       }
     );
 
-    fs.unlinkSync(uploadPath);
+    console.log("Transcription response:", response.data);
 
-    reply.headers({
-      "Content-Type": "text/plain",
-      "Transfer-Encoding": "chunked",
-    });
+    let segments = [];
+    if (Array.isArray(response.data)) {
+      segments = response.data;
+    } else if (response.data && typeof response.data === "object") {
+      segments = response.data.segments || [];
+    }
 
-    response.data.pipe(reply.raw);
-    const segments: { time: string; text: string }[] = [];
-    await axios.post(
-      "http://localhost:3000/users/history",
-      { segments },
-      { headers: { Authorization: request.headers.authorization! } }
-    );
+    if (
+      request.user &&
+      request.user.id &&
+      segments.length > 0 &&
+      segments.every((s: { time: any; text: any }) => s.time && s.text)
+    ) {
+      try {
+        const userId = request.user.id;
+        const fileName = data.filename;
+
+        await History.create({
+          userId,
+          title: fileName,
+          url: "uploads/" + fileName,
+          type: data.mimetype.startsWith("video/") ? "video" : "audio",
+          segments,
+        });
+
+        console.log("Histórico salvo com sucesso!");
+      } catch (historyError) {
+        console.error("Erro ao salvar histórico:", historyError);
+      }
+    } else {
+      console.warn(
+        "Segmentos inválidos ou usuário não autenticado. Histórico não foi salvo."
+      );
+    }
+
+    reply.send(segments.length > 0 ? segments : response.data);
     console.log("Transcrição enviada com sucesso!");
   } catch (error) {
     console.error("Erro ao transcrever áudio:", error);
     throw new Error("Falha ao processar a transcrição");
+  } finally {
+    if (fs.existsSync(uploadPath)) {
+      fs.unlinkSync(uploadPath);
+    }
   }
 };

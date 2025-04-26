@@ -3,7 +3,7 @@ import { transcribeAudio } from "../services/transcriptionService";
 
 class TranscriptionController {
   public async transcribe(
-    req: FastifyRequest<{ Body: any }>,
+    req: FastifyRequest,
     res: FastifyReply
   ): Promise<void> {
     try {

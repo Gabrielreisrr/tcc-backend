@@ -21,6 +21,13 @@ const segmentSchema = z.object({
   text: z.string(),
 });
 
+const historySchema = z.object({
+  title: z.string(),
+  url: z.string(),
+  type: z.string(),
+  segments: z.array(segmentSchema),
+});
+
 declare module "fastify" {
   interface FastifyRequest {
     user?: {
@@ -90,7 +97,9 @@ class UserController {
         return res.status(400).send({ error: "Senha incorreta" });
       }
 
-      const token = generateToken({ id: user._id, email: user.email });
+      const token = generateToken({
+        id: user._id,
+      });
 
       return res.send({ token, user: { name: user.name, email: user.email } });
     } catch (error) {
@@ -100,7 +109,7 @@ class UserController {
   }
 
   public async saveHistory(
-    req: FastifyRequest<{ Body: { segments: any[] } }>,
+    req: FastifyRequest<{ Body: z.infer<typeof historySchema> }>,
     res: FastifyReply
   ) {
     try {
@@ -108,15 +117,15 @@ class UserController {
         return res.status(401).send({ error: "Não autorizado" });
       }
 
-      const validation = segmentsSchema.safeParse(req.body.segments);
+      const validation = historySchema.safeParse(req.body);
       if (!validation.success) {
-        return res.status(400).send({ error: "Segmentos inválidos" });
+        return res.status(400).send({ error: validation.error.errors });
       }
 
       const userId = req.user.id;
-      const { segments } = req.body;
+      const { title, url, type, segments } = req.body;
 
-      await History.create({ userId, segments });
+      await History.create({ userId, title, url, type, segments });
       res.send({ ok: true });
     } catch (error) {
       console.error("Erro ao salvar histórico:", error);

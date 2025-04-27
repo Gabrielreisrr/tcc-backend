@@ -134,6 +134,23 @@ class UserController {
   }
 
   public async getHistory(req: FastifyRequest, res: FastifyReply) {
+    function formatDate(date: Date) {
+      const months = [
+        "Jan",
+        "Fev",
+        "Mar",
+        "Abr",
+        "Mai",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Set",
+        "Out",
+        "Nov",
+        "Dez",
+      ];
+      return `${date.getDate()} ${months[date.getMonth()]}`;
+    }
     try {
       if (!req.user || !req.user.id) {
         return res.status(401).send({ error: "Não autorizado" });
@@ -142,9 +159,19 @@ class UserController {
       const userId = req.user.id;
       const recent = await History.find({ userId })
         .sort({ createdAt: -1 })
-        .limit(10);
+        .limit(10)
+        .lean();
 
-      res.send(recent);
+      const conversations = recent.map((history) => ({
+        id: history._id.toString(),
+        title: history.title,
+        date: formatDate(history.createdAt),
+        type: history.type,
+        progress: 100,
+        active: false,
+      }));
+
+      res.send(conversations);
     } catch (error) {
       console.error("Erro ao buscar histórico:", error);
       res.status(500).send({ error: "Erro ao buscar histórico" });
@@ -171,3 +198,7 @@ class UserController {
 }
 
 export default new UserController();
+
+function lean() {
+  throw new Error("Function not implemented.");
+}

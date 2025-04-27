@@ -4,14 +4,21 @@ interface Segment {
   time: string;
   text: string;
 }
+
 export interface HistoryDoc extends Document {
   userId: string;
+  title: string;
+  type: "video" | "audio";
+  url?: string;
   segments: Segment[];
   createdAt: Date;
 }
 
 const HistorySchema = new Schema<HistoryDoc>({
   userId: { type: String, required: true },
+  title: { type: String, required: true },
+  type: { type: String, required: true },
+  url: { type: String },
   segments: [
     {
       time: { type: String, required: true },

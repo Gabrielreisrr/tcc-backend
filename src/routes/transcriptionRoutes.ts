@@ -18,11 +18,24 @@ async function transcriptionRoutes(app: FastifyInstance) {
   app.register(async (protectedRoutes) => {
     // Adicionando middleware de autenticação
     protectedRoutes.addHook("preHandler", authMiddleware);
-
+    
     // Rota para transcrição de arquivos
+    // Suporta query parameters: autoSummary=true, enhanceText=true
     protectedRoutes.post("/transcribe", transcriptionController.transcribe);
+    
+    // Rota para gerar resumo de uma transcrição
+    protectedRoutes.get(
+      "/transcription/:id/summary",
+      transcriptionController.generateSummary
+    );
+    
+    // Rota para melhorar a qualidade de uma transcrição
+    protectedRoutes.get(
+      "/transcription/:id/enhance",
+      transcriptionController.enhanceTranscription
+    );
 
-    // Rota para exportar transcrição em braille
+    // Rota para exportar transcrição em braille (suporta query parameter enhanced=true)
     protectedRoutes.get(
       "/transcription/:id/braille",
       transcriptionController.exportBraille

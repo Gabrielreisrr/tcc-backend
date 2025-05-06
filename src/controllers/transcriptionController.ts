@@ -2,6 +2,11 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { transcribeAudio } from "../services/transcriptionService";
 import { generateBrailleFile } from "../services/brailleService";
 import History from "../models/History";
+import {
+  generateSummary,
+  enhanceTranscription,
+  textToBraille,
+} from "../services/geminiService";
 
 class TranscriptionController {
   public async transcribe(
@@ -9,7 +14,8 @@ class TranscriptionController {
     res: FastifyReply
   ): Promise<void> {
     try {
-      await transcribeAudio(req, res);
+      const result = await transcribeAudio(req, res);
+      res.send(result);
     } catch (error) {
       console.error(
         "Erro ao processar transcrição:",
@@ -24,25 +30,8 @@ class TranscriptionController {
     reply: FastifyReply
   ) => {
     const { id } = request.params;
-
     try {
-      const numericId = Number(id);
-
-      let history = null;
-
-      if (!isNaN(numericId)) {
-        history = await History.findOne({ id: numericId });
-      }
-
-      if (!history) {
-        try {
-          history = await History.findById(id);
-        } catch (e) {}
-      }
-
-      if (!history) {
-        history = await History.findOne({ _id: id });
-      }
+      const history = await this.findHistoryById(id);
 
       if (!history) {
         console.log(`Transcrição não encontrada: ID ${id}`);
@@ -51,15 +40,19 @@ class TranscriptionController {
           .send({ message: "Transcrição não encontrada" });
       }
 
+      const fullText = history.segments
+        .map((segment) => segment.text)
+        .join("\n");
+
       reply.send({
         id: history._id || history.id,
         title: history.title,
         type: history.type,
         url: history.url,
         segments: history.segments || [],
-        text: history.segments
-          ? history.segments.map((segment) => segment.text).join("\n")
-          : "Sem texto de transcrição disponível",
+        text: fullText,
+        summary: history.summary || null,
+        enhancedText: history.enhancedText || null,
       });
     } catch (error) {
       console.error("Erro ao buscar transcrição:", error);
@@ -70,30 +63,13 @@ class TranscriptionController {
     }
   };
 
-  exportBraille = async (
+  generateSummary = async (
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply
   ) => {
     const { id } = request.params;
-
     try {
-      const numericId = Number(id);
-
-      let history = null;
-
-      if (!isNaN(numericId)) {
-        history = await History.findOne({ id: numericId });
-      }
-
-      if (!history) {
-        try {
-          history = await History.findById(id);
-        } catch (e) {}
-      }
-
-      if (!history) {
-        history = await History.findOne({ _id: id });
-      }
+      const history = await this.findHistoryById(id);
 
       if (!history) {
         return reply
@@ -101,18 +77,121 @@ class TranscriptionController {
           .send({ message: "Transcrição não encontrada" });
       }
 
+      if (history.summary) {
+        return reply.send({
+          id: history._id,
+          summary: history.summary,
+        });
+      }
+
       const fullText = history.segments
         .map((segment) => segment.text)
         .join("\n");
 
-      const filePath = await generateBrailleFile(fullText, id);
+      const summary = await generateSummary(fullText);
 
-      reply.header("Content-Type", "text/plain");
-      reply.header(
-        "Content-Disposition",
-        `attachment; filename="transcription-${id}.txt"`
-      );
-      reply.sendFile(filePath);
+      history.summary = summary;
+      await history.save();
+
+      reply.send({
+        id: history._id,
+        summary,
+      });
+    } catch (error) {
+      console.error("Erro ao gerar resumo:", error);
+      reply.status(500).send({
+        message: "Erro ao gerar resumo",
+        error: (error as Error).message,
+      });
+    }
+  };
+
+  enhanceTranscription = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) => {
+    const { id } = request.params;
+    try {
+      const history = await this.findHistoryById(id);
+
+      if (!history) {
+        return reply
+          .status(404)
+          .send({ message: "Transcrição não encontrada" });
+      }
+
+      if (history.enhancedText) {
+        return reply.send({
+          id: history._id,
+          enhancedText: history.enhancedText,
+        });
+      }
+
+      const fullText = history.segments
+        .map((segment) => segment.text)
+        .join("\n");
+
+      const enhanced = await enhanceTranscription(fullText);
+
+      history.enhancedText = enhanced;
+      await history.save();
+
+      reply.send({
+        id: history._id,
+        enhancedText: enhanced,
+      });
+    } catch (error) {
+      console.error("Erro ao aprimorar transcrição:", error);
+      reply.status(500).send({
+        message: "Erro ao aprimorar transcrição",
+        error: (error as Error).message,
+      });
+    }
+  };
+
+  exportBraille = async (
+    request: FastifyRequest<{
+      Params: { id: string };
+      Querystring: { enhanced?: string };
+    }>,
+    reply: FastifyReply
+  ) => {
+    const { id } = request.params;
+    const { enhanced } = request.query;
+    const useEnhanced = enhanced === "true";
+
+    try {
+      const history = await this.findHistoryById(id);
+
+      if (!history) {
+        return reply
+          .status(404)
+          .send({ message: "Transcrição não encontrada" });
+      }
+
+      const textToConvert =
+        useEnhanced && history.enhancedText
+          ? history.enhancedText
+          : history.segments.map((s) => s.text).join("\n");
+
+      let finalText: string;
+
+      try {
+        finalText = await textToBraille(textToConvert);
+      } catch (geminiError) {
+        console.error("Erro com Gemini, usando método fallback:", geminiError);
+        finalText = textToConvert;
+      }
+
+      const filePath = await generateBrailleFile(finalText, id);
+
+      reply
+        .header("Content-Type", "text/plain")
+        .header(
+          "Content-Disposition",
+          `attachment; filename="transcription-${id}.txt"`
+        )
+        .sendFile(filePath);
     } catch (error) {
       console.error("Erro ao gerar arquivo Braille:", error);
       reply.status(500).send({
@@ -121,6 +200,27 @@ class TranscriptionController {
       });
     }
   };
+
+  private async findHistoryById(id: string) {
+    const numericId = Number(id);
+    let history = null;
+
+    if (!isNaN(numericId)) {
+      history = await History.findOne({ id: numericId });
+    }
+
+    if (!history) {
+      try {
+        history = await History.findById(id);
+      } catch (e) {}
+    }
+
+    if (!history) {
+      history = await History.findOne({ _id: id });
+    }
+
+    return history;
+  }
 }
 
 export default new TranscriptionController();

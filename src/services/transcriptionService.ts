@@ -6,12 +6,17 @@ import util from "util";
 import FormData from "form-data";
 import axios from "axios";
 import History from "../models/History";
+import { enhanceTranscription, generateSummary } from "./geminiService";
 
 const pump = util.promisify(pipeline);
-
 const uploadDir = path.join(__dirname, "../../uploads");
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
+}
+interface TranscriptionSegment {
+  time: string;
+  text: string;
 }
 
 export const transcribeAudio = async (
@@ -19,12 +24,20 @@ export const transcribeAudio = async (
   reply: FastifyReply
 ) => {
   const data = await request.file();
-
   if (!data) {
     throw new Error("Nenhum arquivo de áudio foi enviado");
   }
 
+  const query = request.query as {
+    autoSummary?: string;
+    enhanceText?: string;
+  };
+
+  const shouldGenerateSummary = query.autoSummary === "true";
+  const shouldEnhanceText = query.enhanceText === "true";
+
   const uploadPath = path.join(uploadDir, data.filename);
+  let responseData = null;
 
   try {
     await pump(data.file, fs.createWriteStream(uploadPath));
@@ -33,7 +46,8 @@ export const transcribeAudio = async (
     formData.append("file", fs.createReadStream(uploadPath));
 
     const response = await axios.post(
-      "http://localhost:8001/transcribe",
+      process.env.TRANSCRIPTION_SERVICE_URL ||
+        "http://localhost:8001/transcribe",
       formData,
       {
         headers: formData.getHeaders(),
@@ -42,51 +56,122 @@ export const transcribeAudio = async (
       }
     );
 
-    console.log("Transcription response:", response.data);
+    console.log("Transcription response received");
 
-    let segments = [];
+    let segments: TranscriptionSegment[] = [];
     if (Array.isArray(response.data)) {
       segments = response.data;
     } else if (response.data && typeof response.data === "object") {
       segments = response.data.segments || [];
     }
 
-    if (
-      request.user &&
-      request.user.id &&
-      segments.length > 0 &&
-      segments.every((s: { time: any; text: any }) => s.time && s.text)
-    ) {
+    if (segments.length === 0 || !segments.every((s) => s.time && s.text)) {
+      console.warn("Segmentos inválidos na resposta");
+      return response.data;
+    }
+
+    const fullText = segments.map((s) => s.text).join("\n");
+
+    let enhancedTextResult = null;
+    let summaryResult = null;
+
+    const processingPromises = [];
+
+    if (shouldEnhanceText) {
+      processingPromises.push(
+        enhanceTranscription(fullText)
+          .then((result) => {
+            enhancedTextResult = result;
+          })
+          .catch((err) => {
+            console.error("Erro ao aprimorar texto:", err);
+          })
+      );
+    }
+
+    if (shouldGenerateSummary) {
+      processingPromises.push(
+        generateSummary(fullText)
+          .then((result) => {
+            summaryResult = result;
+          })
+          .catch((err) => {
+            console.error("Erro ao gerar resumo:", err);
+          })
+      );
+    }
+
+    if (processingPromises.length > 0) {
+      await Promise.allSettled(processingPromises);
+    }
+
+    if (request.user && request.user.id) {
       try {
         const userId = request.user.id;
         const fileName = data.filename;
-
-        await History.create({
+        const newHistory = await History.create({
           userId,
           title: fileName,
           url: "uploads/" + fileName,
           type: data.mimetype.startsWith("video/") ? "video" : "audio",
           segments,
+          enhancedText: enhancedTextResult,
+          summary: summaryResult,
         });
 
         console.log("Histórico salvo com sucesso!");
+
+        responseData = {
+          historyId: newHistory._id,
+          segments,
+          ...(enhancedTextResult ? { enhancedText: enhancedTextResult } : {}),
+          ...(summaryResult ? { summary: summaryResult } : {}),
+        };
       } catch (historyError) {
         console.error("Erro ao salvar histórico:", historyError);
+        responseData = {
+          segments,
+          ...(enhancedTextResult ? { enhancedText: enhancedTextResult } : {}),
+          ...(summaryResult ? { summary: summaryResult } : {}),
+        };
       }
     } else {
-      console.warn(
-        "Segmentos inválidos ou usuário não autenticado. Histórico não foi salvo."
-      );
+      console.warn("Usuário não autenticado. Histórico não foi salvo.");
+      responseData = {
+        segments,
+        ...(enhancedTextResult ? { enhancedText: enhancedTextResult } : {}),
+        ...(summaryResult ? { summary: summaryResult } : {}),
+      };
     }
 
-    reply.send(segments.length > 0 ? segments : response.data);
-    console.log("Transcrição enviada com sucesso!");
+    console.log("Transcrição processada com sucesso!");
+    return responseData;
   } catch (error) {
     console.error("Erro ao transcrever áudio:", error);
-    throw new Error("Falha ao processar a transcrição");
+    throw new Error(
+      `Falha ao processar a transcrição: ${(error as Error).message}`
+    );
   } finally {
     if (fs.existsSync(uploadPath)) {
       fs.unlinkSync(uploadPath);
     }
+  }
+};
+
+export const getFullTranscriptionText = async (
+  historyId: string
+): Promise<string> => {
+  try {
+    const history = await History.findById(historyId);
+    if (!history || !history.segments || history.segments.length === 0) {
+      throw new Error("Transcrição não encontrada ou vazia");
+    }
+
+    return history.segments.map((segment) => segment.text).join("\n");
+  } catch (error) {
+    console.error("Erro ao obter texto completo da transcrição:", error);
+    throw new Error(
+      `Falha ao obter texto da transcrição: ${(error as Error).message}`
+    );
   }
 };

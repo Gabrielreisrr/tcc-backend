@@ -11,6 +11,8 @@ export interface HistoryDoc extends Document {
   type: "video" | "audio";
   url?: string;
   segments: Segment[];
+  summary?: string;
+  enhancedText?: string;
   createdAt: Date;
 }
 
@@ -25,6 +27,8 @@ const HistorySchema = new Schema<HistoryDoc>({
       text: { type: String, required: true },
     },
   ],
+  summary: { type: String },
+  enhancedText: { type: String },
   createdAt: { type: Date, default: () => new Date() },
 });
 

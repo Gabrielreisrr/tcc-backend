@@ -6,6 +6,12 @@ interface Segment {
 }
 
 export interface HistoryDoc extends Document {
+  idTimestamp: {
+    type: Number;
+    required: true;
+    unique: true;
+    index: true;
+  };
   userId: string;
   title: string;
   type: "video" | "audio";

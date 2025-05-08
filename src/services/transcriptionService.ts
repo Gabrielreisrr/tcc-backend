@@ -120,6 +120,7 @@ export const transcribeAudio = async (
         });
 
         console.log("Histórico salvo com sucesso!");
+        console.log("ID do histórico:", newHistory._id);
 
         responseData = {
           historyId: newHistory._id,
@@ -145,6 +146,7 @@ export const transcribeAudio = async (
     }
 
     console.log("Transcrição processada com sucesso!");
+    console.log("transcription:", responseData);
     return responseData;
   } catch (error) {
     console.error("Erro ao transcrever áudio:", error);

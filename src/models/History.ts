@@ -7,7 +7,7 @@ interface Segment {
 
 export interface HistoryDoc extends Document {
   idTimestamp: {
-    type: Number;
+    type: String;
     required: true;
     unique: true;
     index: true;

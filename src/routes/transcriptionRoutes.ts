@@ -20,10 +20,10 @@ async function transcriptionRoutes(app: FastifyInstance) {
     //   transcriptionController.enhanceTranscription
     // );
 
-    protectedRoutes.get(
-      "/transcription/:id/braille",
-      transcriptionController.exportBraille
-    );
+    // protectedRoutes.get(
+    //   "/transcription/:id/braille",
+    //   transcriptionController.exportBraille
+    // );
   });
 }
 

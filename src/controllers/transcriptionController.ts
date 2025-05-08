@@ -21,7 +21,7 @@ class TranscriptionController {
   }
 
   getTranscriptionById = async (
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest<{ Params: { id: number } }>,
     reply: FastifyReply
   ) => {
     const { id } = request.params;
@@ -71,57 +71,57 @@ class TranscriptionController {
     }
   };
 
-  exportBraille = async (
-    request: FastifyRequest<{ Params: { id: string } }>,
-    reply: FastifyReply
-  ) => {
-    const { id } = request.params;
+  // exportBraille = async (
+  //   request: FastifyRequest<{ Params: { id: string } }>,
+  //   reply: FastifyReply
+  // ) => {
+  //   const { id } = request.params;
 
-    try {
-      const numericId = Number(id);
+  //   try {
+  //     const numericId = Number(id);
 
-      let history = null;
+  //     let history = null;
 
-      if (!isNaN(numericId)) {
-        history = await History.findOne({ id: numericId });
-      }
+  //     if (!isNaN(numericId)) {
+  //       history = await History.findOne({ id: numericId });
+  //     }
 
-      if (!history) {
-        try {
-          history = await History.findById(id);
-        } catch (e) {}
-      }
+  //     if (!history) {
+  //       try {
+  //         history = await History.findById(id);
+  //       } catch (e) {}
+  //     }
 
-      if (!history) {
-        history = await History.findOne({ _id: id });
-      }
+  //     if (!history) {
+  //       history = await History.findOne({ _id: id });
+  //     }
 
-      if (!history) {
-        return reply
-          .status(404)
-          .send({ message: "Transcrição não encontrada" });
-      }
+  //     if (!history) {
+  //       return reply
+  //         .status(404)
+  //         .send({ message: "Transcrição não encontrada" });
+  //     }
 
-      const fullText = history.segments
-        .map((segment) => segment.text)
-        .join("\n");
+  //     const fullText = history.segments
+  //       .map((segment) => segment.text)
+  //       .join("\n");
 
-      const filePath = await generateBrailleFile(fullText, id);
+  //     const filePath = await generateBrailleFile(fullText, id);
 
-      reply.header("Content-Type", "text/plain");
-      reply.header(
-        "Content-Disposition",
-        `attachment; filename="transcription-${id}.txt"`
-      );
-      reply.sendFile(filePath);
-    } catch (error) {
-      console.error("Erro ao gerar arquivo Braille:", error);
-      reply.status(500).send({
-        message: "Erro ao gerar arquivo Braille",
-        error: (error as Error).message,
-      });
-    }
-  };
+  //     reply.header("Content-Type", "text/plain");
+  //     reply.header(
+  //       "Content-Disposition",
+  //       `attachment; filename="transcription-${id}.txt"`
+  //     );
+  //     reply.sendFile(filePath);
+  //   } catch (error) {
+  //     console.error("Erro ao gerar arquivo Braille:", error);
+  //     reply.status(500).send({
+  //       message: "Erro ao gerar arquivo Braille",
+  //       error: (error as Error).message,
+  //     });
+  //   }
+  // };
 
   // async generateSummary(
   //   request: FastifyRequest<{ Params: { id: string } }>,

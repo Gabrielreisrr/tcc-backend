@@ -48,6 +48,13 @@ class App {
     this.app.register(fastifyStatic, {
       root: path.join(__dirname, "..", "tmp"),
       prefix: "/files/",
+      decorateReply: false,
+    });
+
+    this.app.register(fastifyStatic, {
+      root: path.join(__dirname, "..", "exports"),
+      prefix: "/exports/",
+      decorateReply: false,
     });
   }
 

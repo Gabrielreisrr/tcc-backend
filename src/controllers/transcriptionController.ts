@@ -1,6 +1,8 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { transcribeAudio } from "../services/transcriptionService";
 import { generateBrailleFile } from "../services/brailleService";
+import fs from "fs";
+import path from "path";
 import {
   enhanceTranscription,
   generateSummary,
@@ -84,23 +86,7 @@ class TranscriptionController {
     const { id } = request.params;
 
     try {
-      const numericId = Number(id);
-
-      let history = null;
-
-      if (!isNaN(numericId)) {
-        history = await History.findOne({ id: numericId });
-      }
-
-      if (!history) {
-        try {
-          history = await History.findById(id);
-        } catch (e) {}
-      }
-
-      if (!history) {
-        history = await History.findOne({ _id: id });
-      }
+      const history = await this.findHistoryById(id);
 
       if (!history) {
         return reply
@@ -114,13 +100,19 @@ class TranscriptionController {
 
       const filePath = await generateEnhancedBrailleFile(fullText, id);
 
-      reply.header("Content-Type", "text/plain");
+      const fileStats = fs.statSync(filePath);
+      if (fileStats.size === 0) {
+        throw new Error("Arquivo Braille gerado está vazio");
+      }
+
+      reply.header("Content-Type", "text/plain; charset=utf-8");
       reply.header(
         "Content-Disposition",
         `attachment; filename="transcription-${id}.txt"`
       );
-      const fileName = `transcription-${id}.txt`;
-      reply.sendFile(fileName);
+
+      const fileContent = fs.readFileSync(filePath, "utf-8");
+      return reply.send(fileContent);
     } catch (error) {
       console.error("Erro ao gerar arquivo Braille:", error);
       reply.status(500).send({

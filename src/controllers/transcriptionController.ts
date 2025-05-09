@@ -1,6 +1,12 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { transcribeAudio } from "../services/transcriptionService";
 import { generateBrailleFile } from "../services/brailleService";
+import {
+  enhanceTranscription,
+  generateSummary,
+  generateEnhancedBrailleFile,
+} from "../services/geminiService";
+
 import History from "../models/History";
 
 class TranscriptionController {
@@ -71,143 +77,165 @@ class TranscriptionController {
     }
   };
 
-  // exportBraille = async (
-  //   request: FastifyRequest<{ Params: { id: string } }>,
-  //   reply: FastifyReply
-  // ) => {
-  //   const { id } = request.params;
+  exportBraille = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) => {
+    const { id } = request.params;
 
-  //   try {
-  //     const numericId = Number(id);
+    try {
+      const numericId = Number(id);
 
-  //     let history = null;
+      let history = null;
 
-  //     if (!isNaN(numericId)) {
-  //       history = await History.findOne({ id: numericId });
-  //     }
+      if (!isNaN(numericId)) {
+        history = await History.findOne({ id: numericId });
+      }
 
-  //     if (!history) {
-  //       try {
-  //         history = await History.findById(id);
-  //       } catch (e) {}
-  //     }
+      if (!history) {
+        try {
+          history = await History.findById(id);
+        } catch (e) {}
+      }
 
-  //     if (!history) {
-  //       history = await History.findOne({ _id: id });
-  //     }
+      if (!history) {
+        history = await History.findOne({ _id: id });
+      }
 
-  //     if (!history) {
-  //       return reply
-  //         .status(404)
-  //         .send({ message: "Transcrição não encontrada" });
-  //     }
+      if (!history) {
+        return reply
+          .status(404)
+          .send({ message: "Transcrição não encontrada" });
+      }
 
-  //     const fullText = history.segments
-  //       .map((segment) => segment.text)
-  //       .join("\n");
+      const fullText = history.segments
+        .map((segment) => segment.text)
+        .join("\n");
 
-  //     const filePath = await generateBrailleFile(fullText, id);
+      const filePath = await generateEnhancedBrailleFile(fullText, id);
 
-  //     reply.header("Content-Type", "text/plain");
-  //     reply.header(
-  //       "Content-Disposition",
-  //       `attachment; filename="transcription-${id}.txt"`
-  //     );
-  //     reply.sendFile(filePath);
-  //   } catch (error) {
-  //     console.error("Erro ao gerar arquivo Braille:", error);
-  //     reply.status(500).send({
-  //       message: "Erro ao gerar arquivo Braille",
-  //       error: (error as Error).message,
-  //     });
-  //   }
-  // };
+      reply.header("Content-Type", "text/plain");
+      reply.header(
+        "Content-Disposition",
+        `attachment; filename="transcription-${id}.txt"`
+      );
+      const fileName = `transcription-${id}.txt`;
+      reply.sendFile(fileName);
+    } catch (error) {
+      console.error("Erro ao gerar arquivo Braille:", error);
+      reply.status(500).send({
+        message: "Erro ao gerar arquivo Braille",
+        error: (error as Error).message,
+      });
+    }
+  };
 
-  // async generateSummary(
-  //   request: FastifyRequest<{ Params: { id: string } }>,
-  //   reply: FastifyReply
-  // ) {
-  //   const { id } = request.params;
-  //   try {
-  //     const history = await this.findHistoryById(id);
+  async generateSummary(
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) {
+    const { id } = request.params;
+    try {
+      const history = await this.findHistoryById(id);
 
-  //     if (!history) {
-  //       return reply
-  //         .status(404)
-  //         .send({ message: "Transcrição não encontrada" });
-  //     }
+      if (!history) {
+        return reply
+          .status(404)
+          .send({ message: "Transcrição não encontrada" });
+      }
 
-  //     if (history.summary) {
-  //       return reply.send({
-  //         id: history._id,
-  //         summary: history.summary,
-  //       });
-  //     }
+      if (history.summary) {
+        return reply.send({
+          id: history._id,
+          summary: history.summary,
+        });
+      }
 
-  //     const fullText = history.segments
-  //       .map((segment) => segment.text)
-  //       .join("\n");
+      const fullText = history.segments
+        .map((segment) => segment.text)
+        .join("\n");
 
-  //     const summary = await generateSummary(fullText);
+      const summary = await generateSummary(fullText);
 
-  //     history.summary = summary;
-  //     await history.save();
+      history.summary = summary;
+      await history.save();
 
-  //     reply.send({
-  //       id: history._id,
-  //       summary,
-  //     });
-  //   } catch (error) {
-  //     console.error("Erro ao gerar resumo:", error);
-  //     reply.status(500).send({
-  //       message: "Erro ao gerar resumo",
-  //       error: (error as Error).message,
-  //     });
-  //   }
-  // }
+      reply.send({
+        id: history._id,
+        summary,
+      });
+    } catch (error) {
+      console.error("Erro ao gerar resumo:", error);
+      reply.status(500).send({
+        message: "Erro ao gerar resumo",
+        error: (error as Error).message,
+      });
+    }
+  }
 
-  // enhanceTranscription = async (
-  //   request: FastifyRequest<{ Params: { id: string } }>,
-  //   reply: FastifyReply
-  // ) => {
-  //   const { id } = request.params;
-  //   try {
-  //     const history = await this.findHistoryById(id);
+  enhanceTranscription = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) => {
+    const { id } = request.params;
+    try {
+      const history = await this.findHistoryById(id);
 
-  //     if (!history) {
-  //       return reply
-  //         .status(404)
-  //         .send({ message: "Transcrição não encontrada" });
-  //     }
+      if (!history) {
+        return reply
+          .status(404)
+          .send({ message: "Transcrição não encontrada" });
+      }
 
-  //     if (history.enhancedText) {
-  //       return reply.send({
-  //         id: history._id,
-  //         enhancedText: history.enhancedText,
-  //       });
-  //     }
+      if (history.enhancedText) {
+        return reply.send({
+          id: history._id,
+          enhancedText: history.enhancedText,
+        });
+      }
 
-  //     const fullText = history.segments
-  //       .map((segment) => segment.text)
-  //       .join("\n");
+      const fullText = history.segments
+        .map((segment) => segment.text)
+        .join("\n");
 
-  //     const enhanced = await enhanceTranscription(fullText);
+      const enhanced = await enhanceTranscription(fullText);
 
-  //     history.enhancedText = enhanced;
-  //     await history.save();
+      history.enhancedText = enhanced;
+      await history.save();
 
-  //     reply.send({
-  //       id: history._id,
-  //       enhancedText: enhanced,
-  //     });
-  //   } catch (error) {
-  //     console.error("Erro ao aprimorar transcrição:", error);
-  //     reply.status(500).send({
-  //       message: "Erro ao aprimorar transcrição",
-  //       error: (error as Error).message,
-  //     });
-  //   }
-  // };
+      reply.send({
+        id: history._id,
+        enhancedText: enhanced,
+      });
+    } catch (error) {
+      console.error("Erro ao aprimorar transcrição:", error);
+      reply.status(500).send({
+        message: "Erro ao aprimorar transcrição",
+        error: (error as Error).message,
+      });
+    }
+  };
+
+  private async findHistoryById(id: string) {
+    const numericId = Number(id);
+    let history = null;
+
+    if (!isNaN(numericId)) {
+      history = await History.findOne({ id: numericId });
+    }
+
+    if (!history) {
+      try {
+        history = await History.findById(id);
+      } catch (e) {}
+    }
+
+    if (!history) {
+      history = await History.findOne({ _id: id });
+    }
+
+    return history;
+  }
 }
 
 export default new TranscriptionController();

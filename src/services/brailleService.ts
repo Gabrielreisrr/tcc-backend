@@ -2,33 +2,14 @@ import fs from "fs";
 import path from "path";
 import { textToBraille } from "./geminiService";
 
-export const generateBrailleFile = async (
-  text: string,
-  id: string
-): Promise<string> => {
-  const brailleText = text.normalize();
-
-  const outputDir = path.resolve(__dirname, "..", "exports");
-
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-
-  const filePath = path.join(outputDir, `transcription-${id}.txt`);
-
-  fs.writeFileSync(filePath, brailleText, { encoding: "utf-8" });
-
-  return filePath;
-};
-
 export const formatTextForBraille = async (text: string): Promise<string> => {
   let formattedText = text
-    .replace(/\s+/g, " ") 
-    .replace(/\n+/g, "\n") 
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{2,}/g, "\n")
     .trim();
 
   const maxLineLength = 40;
-  const lines = [];
+  const lines: string[] = [];
   const words = formattedText.split(" ");
   let currentLine = "";
 
@@ -48,6 +29,22 @@ export const formatTextForBraille = async (text: string): Promise<string> => {
   return lines.join("\n");
 };
 
+export const generateBrailleFile = async (
+  text: string,
+  id: string
+): Promise<string> => {
+  const brailleText = text.normalize();
+
+  const outputDir = path.resolve(__dirname, "..", "exports");
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  const filePath = path.join(outputDir, `transcription-${id}.txt`);
+  fs.writeFileSync(filePath, brailleText, { encoding: "utf-8" });
+
+  return filePath;
+};
 
 export const generateEnhancedBrailleFile = async (
   text: string,
@@ -55,14 +52,10 @@ export const generateEnhancedBrailleFile = async (
 ): Promise<string> => {
   try {
     const formattedText = await formatTextForBraille(text);
-
     const brailleText = await textToBraille(formattedText);
-
     return generateBrailleFile(brailleText, id);
   } catch (error) {
-    console.error("Erro ao gerar arquivo braille aprimorado:", error);
-
-
+    console.error("Erro ao gerar arquivo Braille aprimorado:", error);
     return generateBrailleFile(text, id);
   }
 };

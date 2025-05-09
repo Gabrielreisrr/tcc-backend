@@ -10,20 +10,20 @@ async function transcriptionRoutes(app: FastifyInstance) {
 
     protectedRoutes.post("/transcribe", transcriptionController.transcribe);
 
-    // protectedRoutes.get(
-    //   "/transcription/:id/summary",
-    //   transcriptionController.generateSummary
-    // );
+    protectedRoutes.get(
+      "/transcription/:id/summary",
+      transcriptionController.generateSummary
+    );
 
-    // protectedRoutes.get(
-    //   "/transcription/:id/enhance",
-    //   transcriptionController.enhanceTranscription
-    // );
+    protectedRoutes.get(
+      "/transcription/:id/enhance",
+      transcriptionController.enhanceTranscription
+    );
 
-    // protectedRoutes.get(
-    //   "/transcription/:id/braille",
-    //   transcriptionController.exportBraille
-    // );
+    protectedRoutes.get(
+      "/transcription/:id/braille",
+      transcriptionController.exportBraille
+    );
   });
 }
 

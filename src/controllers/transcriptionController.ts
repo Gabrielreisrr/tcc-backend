@@ -122,10 +122,10 @@ class TranscriptionController {
     }
   };
 
-  async generateSummary(
+  generateSummary = async (
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply
-  ) {
+  ) => {
     const { id } = request.params;
     try {
       const history = await this.findHistoryById(id);
@@ -163,7 +163,7 @@ class TranscriptionController {
         error: (error as Error).message,
       });
     }
-  }
+  };
 
   enhanceTranscription = async (
     request: FastifyRequest<{ Params: { id: string } }>,
